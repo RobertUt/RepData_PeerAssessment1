@@ -1,25 +1,73 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "PA1_template.Rmd"
+author: "Robert"
+date: "3/10/2021"
+output:
+  html_document: 
+    keep_md:true
 ---
 
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
-## Loading and preprocessing the data
+## Loading the data and packages
 
 
+```{r, warning = FALSE, echo = TRUE}
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+data <- read.csv("./activity.csv")
+data <- tbl_df(data)
+```
 
 ## What is mean total number of steps taken per day?
 
+Plot the mean number of steps per day. Below you find the means and medians per day. Note that for most of the days median equals 0. This means that during most of the intervals no steps were taken.
 
+```{r, echo=TRUE}
+mn <- tapply(data$steps, data$date, mean)
+md <- tapply(data$steps, data$date, median) 
+hist(mn)
+mn
+md
+```
 
 ## What is the average daily activity pattern?
 
-
+``` {r, echo = TRUE}
+ts <- tapply(data$steps, data$interval, mean, na.rm = TRUE)
+length(unique(data$interval))   # use length function to find the number of intervals (breaks/bins)  
+hist(ts,  breaks = 288)
+```
 
 ## Imputing missing values
+Replace missing values by mean of the interval that missing value belongs to. Plot a histogram showing the mean number of steps in absence of missing values. Show the mean and median.
+``` {r, echo = TRUE}
+nas <- is.na(data$steps)
+length(data$steps[nas])   # # use length function to find the number of missing values in the steps column 
+data2 <- data %>% group_by(interval) %>% mutate(steps = ifelse(is.na(steps), mean(steps, na.rm = TRUE), steps))     
+mn2 <- tapply(data2$steps, data2$date, mean)
+md2 <- tapply(data2$steps, data2$date, median)
+hist(mn2)
+mn
+```
 
-
+In contrast to most of the dates the imputed dates have a median other than 0. This is because 288 NAs were replaced by the average value for each of the intervals.
+``` {r, echo = TRUE }
+md2
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+Convert date column to class "Date" and create a two factor variable. Replace missing values by mean of the interval that missing value belongs to. Plot the mean of steps per interval for weekdays and weekend.
+``` {r, echo = TRUE}
+data$date <- ymd(data$date)   #use lubridate package to convert to class "Date".
+# class(data$date)
+# weekdays(data$date)
+data$days <- ifelse(weekdays(data$date) %in% c("Saturday", "Sunday"), "weekend", "weekday")
+data2 <- data %>% group_by(interval) %>% mutate(steps = ifelse(is.na(steps), mean(steps, na.rm = TRUE), steps))   
+g <- ggplot(data2, aes(interval, steps))
+g + stat_summary(fun = "mean", geom = "line") + facet_grid(days ~ ., , scales = "free") + ggtitle("Average number of steps") + theme(plot.title = element_text(hjust = 0.5)) 
+```
